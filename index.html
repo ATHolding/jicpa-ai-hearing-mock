@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>会員AIヒアリング</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* 協会の協議資料と同じ落ち着きで。紙=淡い青灰、藍=操作、琥珀=注意。左に聞き取り、右に結果が育つ二面。 */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#1b2431; --muted:#5f6b7a; --line:#d6dce5;
+  --accent:#1f3f6a; --accent-fg:#ffffff; --accent-soft:#e6edf7;
+  --warn:#7a4e00; --warn-soft:#fff3d6; --ok:#1f6b45; --ok-soft:#e3f3ea;
+  --me:#e9eef6; --ai:#ffffff;
+  --display:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
+  --body:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121820; --card:#1a2230; --fg:#e7ebf1; --muted:#9ba7b7; --line:#2c3746;
+    --accent:#8fb5e8; --accent-fg:#0f1a28; --accent-soft:#1f3149;
+    --warn:#f0c674; --warn-soft:#3a2d0f; --ok:#8fd3ad; --ok-soft:#163525;
+    --me:#243247; --ai:#1a2230; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121820; --card:#1a2230; --fg:#e7ebf1; --muted:#9ba7b7; --line:#2c3746;
+  --accent:#8fb5e8; --accent-fg:#0f1a28; --accent-soft:#1f3149;
+  --warn:#f0c674; --warn-soft:#3a2d0f; --ok:#8fd3ad; --ok-soft:#163525;
+  --me:#243247; --ai:#1a2230; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:14px var(--body);line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+img{max-width:100%}[hidden]{display:none!important}
+.wrap{max-width:1040px;margin:0 auto}
+header{padding-block:28px 12px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.eyebrow{font-size:12px;color:var(--muted)}
+h1{font-family:var(--display);font-weight:700;font-size:28px;margin:4px 0 6px;text-wrap:balance}
+.lead{color:var(--muted);margin:0;max-width:60ch}
+.tabs{display:flex;gap:6px;margin-top:16px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--fg);padding:8px 14px;border-radius:4px;cursor:pointer;font:inherit;font-size:14px}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.tab:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:18px;min-width:0}
+.card h2{font-family:var(--display);font-size:18px;margin:0 0 10px;font-weight:700}
+.note{background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:10px 12px;font-size:13px;margin:10px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}
+.chip{border:1px solid var(--line);background:transparent;color:var(--fg);padding:6px 12px;border-radius:999px;cursor:pointer;font:inherit;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+label.sec{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);padding:9px 16px;border-radius:4px;cursor:pointer;font:inherit;font-size:14px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.progress{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);margin-bottom:8px}
+.progress .bar{flex:1;height:6px;background:var(--accent-soft);border-radius:3px;overflow:hidden}
+.progress .bar i{display:block;height:100%;background:var(--accent);width:0}
+.chat{display:flex;flex-direction:column;gap:10px;max-height:480px;overflow-y:auto;padding:4px 2px;scroll-behavior:smooth}
+.msg{max-width:88%;padding:10px 14px;border-radius:6px;border:1px solid var(--line);white-space:pre-wrap;word-break:break-word;font-size:14.5px}
+.msg.ai{background:var(--ai);align-self:flex-start;border-top-left-radius:2px}
+.msg.me{background:var(--me);align-self:flex-end;border-top-right-radius:2px}
+.msg .who{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+.msg.thinking{color:var(--muted)}
+.composer{display:flex;gap:8px;margin-top:12px;align-items:flex-end}
+textarea{flex:1;min-width:0;font:inherit;font-size:14.5px;padding:10px;border:1px solid var(--line);border-radius:4px;background:var(--card);color:var(--fg);resize:vertical;min-height:44px}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+.step{font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);font-size:14px}
+.next{border:1px solid var(--accent);border-radius:6px;padding:14px 16px;margin-bottom:16px}
+.next .k{font-size:12px;color:var(--accent);font-weight:500}
+.next h3{font-family:var(--display);font-size:19px;margin:2px 0 6px}
+.next p{margin:0;font-size:14px}
+.cases h3.sec{font-size:13px;color:var(--muted);font-weight:500;margin:0 0 4px}
+.uc{border-top:1px solid var(--line);padding:12px 0}
+.uc h4{font-size:15px;margin:0 0 2px;font-weight:700}
+.uc .meta{font-size:12px;color:var(--muted)}
+.uc p{margin:4px 0;font-size:14px}
+.uc .caution{color:var(--warn);font-size:13px}
+.mine{background:var(--accent-soft);border-radius:4px;padding:10px 12px;font-size:13.5px;margin-top:12px}
+.saved{background:var(--ok-soft);color:var(--ok);border-radius:4px;padding:10px 12px;font-size:14px;margin-top:12px}
+.profile{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:12.5px;color:var(--muted);margin-top:14px}
+.profile dd{margin:0;color:var(--fg)}
+.tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:1px 10px;font-size:12px;margin:0 4px 4px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.tile .n{font-family:var(--display);font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile .l{font-size:12px;color:var(--muted)}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;font-size:13px}
+.bar2{height:10px;background:var(--accent);border-radius:2px;min-width:2px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;white-space:nowrap}
+tr.r{cursor:pointer}
+tr.r:hover td{background:var(--accent-soft)}
+td.sum{max-width:36ch}
+.detail{margin-top:14px}
+.detail pre{white-space:pre-wrap;font:inherit;font-size:13px;background:var(--bg);padding:10px;border-radius:4px;max-height:320px;overflow:auto}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:820px){.two{grid-template-columns:1fr}}
+.arch{font-size:13.5px}
+.arch table th{white-space:normal}
+.pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.wait{background:var(--warn-soft);color:var(--warn)}
+@media (prefers-reduced-motion:reduce){.chat{scroll-behavior:auto}}
+</style></head><body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">日本公認会計士協会 東京会 業務委員会 ｜ 討議用の試作（2026-10-14）</div>
+  <h1>会員AIヒアリング</h1>
+  <p class="lead">会員アンケートを「フォームに書く」から「AIに話す」に変える試作です。AIが決まった項目を順に聞き取り、終わると「オススメの一手」と「フィットしそうな活用事例」を返します。回答は委員会に集まり、うまくいった使い方は活用事例集の候補になります。</p>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-member" aria-selected="true">会員として答える</button>
+    <button class="tab" role="tab" id="tab-committee" aria-selected="false">委員会で見る</button>
+    <button class="tab" role="tab" id="tab-arch" aria-selected="false">この試作の中身</button>
+  </div>
+</header>
+
+<section id="view-member" role="tabpanel">
+  <div class="grid">
+    <div class="card" id="hearing">
+      <h2>聞き取り</h2>
+      <div id="setup">
+        <p class="small muted">項目は4つ。AIが1つずつ聞きます。所要は3分ほど（デモ用に短くしています）。</p>
+        <div class="note">関与先名・個人名・未公表の数値は書かないでください。回答は委員会の集計に保存されます（試作のため、委員会から案内された URL でのみ使えます）。</div>
+        <label class="sec">ご所属</label>
+        <div class="chips" id="segChips"></div>
+        <label class="sec">主な業務</label>
+        <div class="chips" id="workChips"></div>
+        <div class="row">
+          <button class="btn" id="startBtn">聞き取りをはじめる</button>
+          <span class="step" id="aiState">AIの準備を確認しています…</span>
+        </div>
+      </div>
+      <div id="chatArea" hidden>
+        <div class="progress"><span id="progText">項目 1 / 4</span><div class="bar"><i id="progBar"></i></div></div>
+        <div class="chat" id="chat"></div>
+        <div class="composer">
+          <textarea id="input" rows="2" placeholder="ここに答えを書いてください（Enterで送信、Shift+Enterで改行）"></textarea>
+          <button class="btn" id="sendBtn">送る</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn ghost" id="finishBtn">ここまでで結果をもらう</button>
+          <button class="btn ghost" id="stopBtn" hidden>止める</button>
+          <span class="step" id="turnInfo"></span>
+        </div>
+        <p class="hint" id="chatHint"></p>
+      </div>
+    </div>
+    <div class="card" id="resultCard">
+      <h2>あなたへの結果</h2>
+      <div id="result"><p class="empty">聞き取りが終わると、ここに「オススメの一手」を1つと、活用事例集から「フィットしそうな活用事例」を3件返します。あなたが語ったうまくいった使い方は、事例集の候補として委員会に預かります。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="view-committee" role="tabpanel" hidden>
+  <div class="tiles" id="tiles"></div>
+  <div class="two">
+    <div class="card"><h2>区分別</h2><div class="bars" id="barsSeg"></div></div>
+    <div class="card"><h2>課題別（複数該当あり）</h2><div class="bars" id="barsChal"></div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>回答一覧</h2>
+    <p class="small muted" id="dbState">読み込んでいます…</p>
+    <div class="tbl"><table id="tbl"><thead><tr><th>日時</th><th>所属</th><th>業務</th><th>課題</th><th>困りごと（要約）</th><th>AI利用</th><th>オススメの一手</th><th>欲しい成果物</th></tr></thead><tbody></tbody></table></div>
+    <div class="detail" id="detail" hidden></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>活用事例集</h2>
+    <p class="small muted" id="caseState">サンプル（委員会作成）と、回答から集まった候補（承認待ち）。承認は Supabase の表で <code>approved</code> を立てます。</p>
+    <div class="tbl"><table id="caseTbl"><thead><tr><th>ID</th><th>区分</th><th>課題</th><th>場面</th><th>何をどう渡すか</th><th>出所</th><th>状態</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>聞き取り項目（有効なもの）</h2>
+    <p class="small muted">表 <code>tmp_jicpa_hearing_mock_questions</code> の <code>active</code> と <code>sort</code> で入れ替えられます。</p>
+    <div class="tbl"><table id="qTbl"><thead><tr><th>ID</th><th>聞くこと</th><th>知りたいこと</th><th>深掘り上限</th><th>事例収集</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<section id="view-arch" role="tabpanel" hidden>
+  <div class="card arch">
+    <h2>この試作の仕組みと、本番との差</h2>
+    <p>会員は何のアカウントも要りません。ページはこの HTML、対話と保存は小さな関数1本が受けます。LLMのキーは関数側の秘密情報にだけあり、ブラウザには出ません。聞き取りの項目と活用事例集は Supabase の表で、委員会が差し替えられます。</p>
+    <div class="tbl"><table>
+      <thead><tr><th>要素</th><th>この試作</th><th>本番で足すもの</th></tr></thead>
+      <tbody>
+        <tr><td>画面</td><td>HTML 1枚（会員面・委員会面）</td><td>協会のドメインに置く。従来フォームも併置</td></tr>
+        <tr><td>AI対話</td><td>関数がLLM APIを呼ぶ。会員ログイン不要</td><td>学習に使われないAPI契約、費用上限、応答の監視</td></tr>
+        <tr><td>聞き取りの制御</td><td>項目表（デモは4項目・深掘りなし）をサーバが順に渡す。項目が尽きたら締める</td><td>委員会で項目と深掘り方針を決める。ここが本体</td></tr>
+        <tr><td>活用事例集</td><td>表1つ。サンプル20件＋回答から抽出した候補（承認待ち）</td><td>承認フロー、公開ページ、分類の見直し</td></tr>
+        <tr><td>結果</td><td>オススメの一手1つ＋フィットする事例3件</td><td>研修回への誘導、事例集の公開版へのリンク</td></tr>
+        <tr><td>保存</td><td>DB 1表。公開キーからは読めない（関数だけが読み書き）</td><td>匿名ID・保持期間・閲覧権限の規程</td></tr>
+        <tr><td>入口の守り</td><td>アクセスコード、IPごと・1日の回数上限</td><td>会員番号での認証、固有名詞の検知と伏せ字</td></tr>
+        <tr><td>運用</td><td>Akira の環境で稼働（仮置き・試作終了時に削除）</td><td>委員会名義の管理者、問い合わせ先</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+</div>
+
+<script>
+const API_BASE="https://halbfjxkbrkulsmbklmc.supabase.co/functions/v1/jicpa-hearing";
+const SEGMENTS=["中小監査法人","個人会計事務所","独立系コンサル","社外役員","組織内会計士","その他"];
+const WORKS=["財務諸表監査","会計コンサルティング","税務","社外役員"];
+const CHALLENGES=["知識・ルールの補強","人的リソースの不足","リスクへの対応"];
+const OUTPUTS=["①ユースケース集","②AI利用ルール雛形","③実務プロンプト集","④会員アンケート","⑤研修アーカイブ","⑥事例共有コミュニティ"];
+const SCRIPT=["関与先名や個人名は書かないでください。まず、今いちばん時間を取られている仕事は何ですか。","AIを業務で使ったことはありますか。あれば、うまくいった使い方（何を渡して何をさせたか）を教えてください。","AIで困りごとが減るとしたら、どの仕事でしょうか。","委員会に作ってほしいものはありますか。"];
+
+const state={seg:null,work:null,turns:[],qi:0,fu:0,total:4,stage:"setup",summary:null,mode:"ai"};
+let ai=true, ctl=null;
+const CODE=new URLSearchParams(location.search).get("k")||""; // 公開ページには鍵を置かない。委員会から配る URL の ?k= で渡す
+const $=id=>document.getElementById(id);
+async function api(body,signal){
+  const r=await fetch(API_BASE+"?k="+encodeURIComponent(CODE),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body),signal});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){throw {code:j.code||("http_"+r.status),message:j.message||"",text:j.text};}
+  return j;
+}
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function copyFor(code){
+  return ({invalid_json:"AIの返答の形式が崩れました。もう一度送ってください。",http_403:"アクセスコードが違います。",http_429:"今日の上限に達しました。明日もう一度お試しください。",daily_cap:"今日の上限に達しました。明日もう一度お試しください。",upstream_error:"AIとの通信に失敗しました。もう一度送ってください。",no_questions:"聞き取り項目が設定されていません。"})[code]||"通信に失敗しました。もう一度送ってください。";
+}
+
+// ---------- タブ ----------
+const tabs={"tab-member":"view-member","tab-committee":"view-committee","tab-arch":"view-arch"};
+for(const t of Object.keys(tabs)){
+  $(t).addEventListener("click",()=>{for(const k of Object.keys(tabs)){$(k).setAttribute("aria-selected",String(k===t));$(tabs[k]).hidden=k!==t;} if(t==="tab-committee") loadRows();});
+}
+// ---------- チップ ----------
+function chips(el,list,key){
+  el.innerHTML="";
+  for(const v of list){
+    const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=v;b.setAttribute("aria-pressed","false");
+    b.addEventListener("click",()=>{state[key]=v;[...el.children].forEach(c=>c.setAttribute("aria-pressed",String(c===b)));});
+    el.appendChild(b);
+  }
+}
+chips($("segChips"),SEGMENTS,"seg"); chips($("workChips"),WORKS,"work");
+$("aiState").textContent=CODE?"AIの準備ができています。":"この URL にはアクセスコードがありません。委員会から案内された URL を開いてください（固定の質問で試すことはできます）。"; if(!CODE){ai=false;state.mode="script";}
+
+// ---------- チャット ----------
+function addMsg(role,text,extra){
+  const d=document.createElement("div");d.className="msg "+(role==="assistant"?"ai":"me")+(extra?" "+extra:"");
+  const w=document.createElement("span");w.className="who";w.textContent=role==="assistant"?"聞き取りAI":"あなた";
+  d.appendChild(w);d.appendChild(document.createTextNode(text));$("chat").appendChild(d);$("chat").scrollTop=$("chat").scrollHeight;return d;
+}
+function setMsg(el,text){el.replaceChildren(el.firstChild,document.createTextNode(text));$("chat").scrollTop=$("chat").scrollHeight;}
+function setProgress(){
+  const n=Math.min(state.qi+1,state.total);
+  $("progText").textContent=state.stage==="done"||state.stage==="summarizing"?`項目 ${state.total} / ${state.total}`:`項目 ${n} / ${state.total}`+(state.fu>0?"（掘り下げ）":"");
+  $("progBar").style.width=Math.round((state.stage==="done"||state.stage==="summarizing"?state.total:state.qi)/state.total*100)+"%";
+}
+async function askAI(){
+  if(!ai) return scriptedNext();
+  const bubble=addMsg("assistant","考えています…","thinking");
+  ctl=new AbortController(); $("stopBtn").hidden=false; $("sendBtn").disabled=true; $("finishBtn").disabled=true;
+  try{
+    const r=await api({action:"chat",turns:state.turns,qi:state.qi,fu:state.fu,seg:state.seg,work:state.work},ctl.signal);
+    bubble.classList.remove("thinking"); setMsg(bubble,r.text);
+    state.turns.push({role:"assistant",content:r.text});
+    state.qi=r.qi; state.fu=r.fu; state.total=r.total||state.total; setProgress();
+    if(r.done){ $("chatHint").textContent="聞き取りが終わりました。右側に結果を作っています。"; await finish(); }
+    else $("input").focus();
+  }catch(e){
+    bubble.classList.remove("thinking");
+    if(e.name==="AbortError"){ $("chat").removeChild(bubble); }
+    else { setMsg(bubble,copyFor(e.code)); if(e.code==="http_403"||e.code==="no_questions"){ ai=false; state.mode="script"; $("chat").removeChild(bubble); $("chatHint").textContent="AIが使えないため、固定の質問に切り替えます。"; scriptedNext(); } }
+  }finally{ $("stopBtn").hidden=true; $("sendBtn").disabled=false; $("finishBtn").disabled=false; }
+}
+function scriptedNext(){
+  const n=state.turns.filter(t=>t.role==="assistant").length;
+  if(n>=SCRIPT.length){ addMsg("assistant","ありがとうございました。結果を作ります。"); return finish(); }
+  const q=SCRIPT[n]; state.turns.push({role:"assistant",content:q}); addMsg("assistant",q); state.qi=n; setProgress(); $("input").focus();
+}
+$("startBtn").addEventListener("click",()=>{
+  if(!state.seg||!state.work){ $("aiState").textContent="ご所属と主な業務を選んでください。"; return; }
+  state.stage="chat"; $("setup").hidden=true; $("chatArea").hidden=false; setProgress();
+  state.turns=[{role:"user",content:`回答者の所属: ${state.seg}。主な業務: ${state.work}。聞き取りを始めてください。`}];
+  askAI();
+});
+async function send(){
+  const v=$("input").value.trim(); if(!v||state.stage!=="chat") return;
+  $("input").value=""; state.turns.push({role:"user",content:v}); addMsg("user",v);
+  if(!ai) return scriptedNext();
+  await askAI();
+}
+$("sendBtn").addEventListener("click",send);
+$("input").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();} });
+$("stopBtn").addEventListener("click",()=>ctl?.abort());
+$("finishBtn").addEventListener("click",()=>{ if(state.turns.filter(t=>t.role==="user").length<2){$("chatHint").textContent="1問は答えてから押してください。";return;} finish(); });
+
+// ---------- 結果 ----------
+async function finish(){
+  if(state.stage==="done"||state.stage==="summarizing") return;
+  state.stage="summarizing"; $("sendBtn").disabled=true; $("finishBtn").disabled=true; $("input").disabled=true; setProgress();
+  $("result").innerHTML='<p class="empty">会話を読み返して、オススメの一手と活用事例を選んでいます…（30秒ほど）</p>';
+  let s=null;
+  if(ai){ try{ const r=await api({action:"summarize",seg:state.seg,work:state.work,turns:state.turns.slice(1)}); s=r.summary; }
+    catch(e){ $("chatHint").textContent=copyFor(e.code); s=null; } }
+  if(!s) s={challenges:[],pain:"",ai_status:"",blockers:[],wants_training:"",wants_outputs:[],next_step:{title:"まず1つ、明日の作業で試す",body:"AIによる要約が使えなかったため、標準の案内です。"},fit_cases:[],fit_reason:"",use_case_candidate:null,fallback:true};
+  state.summary=s; state.stage="done"; setProgress(); renderResult(s);
+}
+function renderResult(s){
+  const el=$("result"); el.innerHTML="";
+  const ns=s.next_step||{};
+  const nx=document.createElement("div");nx.className="next";
+  nx.innerHTML=`<div class="k">オススメの一手</div><h3>${esc(ns.title||"—")}</h3><p>${esc(ns.body||"")}</p>`;
+  el.appendChild(nx);
+  const cs=document.createElement("div");cs.className="cases";
+  cs.innerHTML=`<h3 class="sec">フィットしそうな活用事例${s.fit_reason?`　<span class="muted">${esc(s.fit_reason)}</span>`:""}</h3>`;
+  const fits=Array.isArray(s.fit_cases)?s.fit_cases:[];
+  if(!fits.length) cs.insertAdjacentHTML("beforeend",'<p class="empty">該当する事例がまだありません。</p>');
+  for(const c of fits){
+    cs.insertAdjacentHTML("beforeend",`<div class="uc"><h4>${esc(c.title)}</h4><div class="meta">${esc(c.domain)}／${esc(c.challenge)}／${esc(c.tool_type)}（事例 ${esc(c.id)}）</div><p>${esc(c.how)}</p>${c.effect?`<p class="small muted">効果: ${esc(c.effect)}</p>`:""}${c.caution?`<p class="caution">留意: ${esc(c.caution)}</p>`:""}</div>`);
+  }
+  el.appendChild(cs);
+  const uc=s.use_case_candidate;
+  if(uc&&uc.title){ const m=document.createElement("div");m.className="mine";m.innerHTML=`<strong>あなたの事例（委員会に預かります）</strong><br>${esc(uc.title)}<br><span class="small muted">${esc(uc.how||"")}</span><br><span class="small muted">承認後に、活用事例集として会員に共有されます。</span>`; el.appendChild(m); }
+  const chal=Array.isArray(s.challenges)?s.challenges:[];
+  const prof=document.createElement("dl");prof.className="profile";
+  prof.innerHTML=`<dt>区分</dt><dd>${esc(state.seg)}／${esc(state.work)}</dd><dt>課題</dt><dd>${chal.map(c=>`<span class="tag">${esc(c)}</span>`).join("")||"—"}</dd><dt>困りごと</dt><dd>${esc(s.pain||"—")}</dd><dt>AI利用</dt><dd>${esc(s.ai_status||"—")}</dd>`;
+  el.appendChild(prof);
+  const row=document.createElement("div");row.className="row";row.style.marginTop="12px";
+  const save=document.createElement("button");save.className="btn";save.textContent="この回答を委員会に送る";
+  const msg=document.createElement("span");msg.className="small muted";msg.textContent="送ると集計に載ります。";
+  save.addEventListener("click",()=>saveResponse(save,msg));
+  row.appendChild(save);row.appendChild(msg);el.appendChild(row);
+}
+async function saveResponse(btn,msg){
+  btn.disabled=true; msg.textContent="送っています…";
+  try{
+    const r=await api({action:"save",doc:{segment:state.seg,work:state.work,mode:ai?"ai":"script",summary:state.summary,transcript:state.turns.slice(1)}});
+    btn.textContent="送りました"; msg.textContent="";
+    const ok=document.createElement("div");ok.className="saved";ok.textContent="ありがとうございました。回答は委員会の集計に入りました。"+(r.case_id?"あなたの事例は候補 "+r.case_id+" として預かりました。":"")+"研修会の案内は東京CPAニュースでお知らせします。";
+    $("result").appendChild(ok);
+  }catch(e){ btn.disabled=false; msg.textContent="保存できませんでした。もう一度押してください。"; }
+}
+
+// ---------- 委員会面 ----------
+let rows=[], cases=[], questions=[];
+async function loadRows(){
+  $("dbState").textContent="読み込んでいます…";
+  try{ const r=await api({action:"list"}); rows=r.rows||[]; cases=r.cases||[]; questions=r.questions||[]; renderCommittee();
+    $("dbState").textContent=`最新の回答から順に ${rows.length} 件。行を押すと会話ログが見られます。`; }
+  catch(e){ $("dbState").textContent=copyFor(e.code); }
+}
+function bars(el,pairs){
+  const max=Math.max(1,...pairs.map(p=>p[1])); el.innerHTML="";
+  for(const [l,v] of pairs){ el.insertAdjacentHTML("beforeend",`<span>${esc(l)}</span><div><div class="bar2" style="width:${Math.round(v/max*100)}%"></div></div><span style="font-variant-numeric:tabular-nums">${v}</span>`); }
+}
+function renderCommittee(){
+  const n=rows.length;
+  $("tiles").innerHTML=[["回答数",n],["AIを日常的に使用",rows.filter(r=>/日常/.test(r.ai_status||"")).length],["集まった事例（承認待ち）",cases.filter(c=>c.source==="survey"&&!c.approved).length],["公開中の事例",cases.filter(c=>c.approved).length]]
+    .map(([l,v])=>`<div class="tile"><div class="n">${v}</div><div class="l">${l}</div></div>`).join("");
+  bars($("barsSeg"),SEGMENTS.map(s=>[s,rows.filter(r=>r.segment===s).length]));
+  bars($("barsChal"),CHALLENGES.map(c=>[c,rows.filter(r=>(r.challenges||[]).includes(c)).length]));
+  const tb=$("tbl").querySelector("tbody"); tb.innerHTML="";
+  if(!n) tb.innerHTML='<tr><td colspan="8" class="muted">まだ回答はありません。</td></tr>';
+  for(const r of rows){
+    const tr=document.createElement("tr");tr.className="r";
+    tr.innerHTML=`<td class="small">${esc((r.createdAt||"").slice(0,16).replace("T"," "))}</td><td>${esc(r.segment)}</td><td>${esc(r.work)}</td><td>${(r.challenges||[]).map(c=>`<span class="tag">${esc(c.slice(0,2))}</span>`).join("")}</td><td class="sum">${esc(r.pain)}</td><td>${esc(r.ai_status)}</td><td class="sum">${esc(r.guide?.next_step?.title||"")}</td><td>${(r.wants_outputs||[]).map(i=>OUTPUTS[i-1]?OUTPUTS[i-1].slice(0,1):"").join(" ")}</td>`;
+    tr.addEventListener("click",()=>showDetail(r)); tb.appendChild(tr);
+  }
+  const cb=$("caseTbl").querySelector("tbody"); cb.innerHTML="";
+  for(const c of cases){
+    cb.insertAdjacentHTML("beforeend",`<tr><td>${esc(c.id)}</td><td>${esc(c.domain)}</td><td>${esc(c.challenge.slice(0,2))}</td><td>${esc(c.title)}</td><td class="sum">${esc(c.how)}</td><td>${c.source==="survey"?"回答から":"サンプル"}${c.contributor_segment?`<br><span class="small muted">${esc(c.contributor_segment)}</span>`:""}</td><td>${c.approved?'<span class="pill ok">公開</span>':'<span class="pill wait">承認待ち</span>'}</td></tr>`);
+  }
+  const qb=$("qTbl").querySelector("tbody"); qb.innerHTML="";
+  for(const q of questions){
+    qb.insertAdjacentHTML("beforeend",`<tr><td>${esc(q.id)}</td><td>${esc(q.ask)}</td><td class="sum">${esc(q.goal)}</td><td>${q.max_followups}</td><td>${q.collects_use_case?"○":""}</td></tr>`);
+  }
+}
+function showDetail(r){
+  const d=$("detail"); d.hidden=false; const g=r.guide||{};
+  d.innerHTML=`<h3 style="margin:0 0 6px;font-size:15px">回答の詳細</h3>
+  <dl class="profile"><dt>所属／業務</dt><dd>${esc(r.segment)}／${esc(r.work)}</dd><dt>課題</dt><dd>${(r.challenges||[]).map(esc).join("、")||"—"}</dd><dt>困りごと</dt><dd>${esc(r.pain)}</dd><dt>使わない理由</dt><dd>${(r.blockers||[]).map(esc).join("、")||"—"}</dd><dt>研修で聞きたい</dt><dd>${esc(r.wants_training)||"—"}</dd><dt>欲しい成果物</dt><dd>${(r.wants_outputs||[]).map(i=>esc(OUTPUTS[i-1]||"")).join("、")||"—"}</dd><dt>オススメの一手</dt><dd>${esc(g.next_step?.title||"")}　<span class="muted">${esc(g.next_step?.body||"")}</span></dd><dt>返した事例</dt><dd>${(g.fit_case_ids||[]).map(esc).join("、")||"—"}</dd></dl>
+  <details><summary class="small">会話ログ</summary><pre>${esc((r.transcript||[]).map(t=>(t.role==="assistant"?"AI: ":"回答者: ")+t.content).join("\n\n"))}</pre></details>`;
+  d.scrollIntoView({block:"nearest"});
+}
+</script>
+</body></html>
